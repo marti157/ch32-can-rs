@@ -31,6 +31,7 @@ name = "ch32-can-rs"
 version = "0.1.0"
 dependencies = [
  "ch32-hal",
+ "ch32-metapac",
  "embassy-executor",
  "embassy-time",
  "panic-halt",

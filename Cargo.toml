@@ -9,6 +9,10 @@ ch32-hal = { path = "../ch32-hal", features = [
   "defmt",
   "embassy",
 ], default-features = false }
+ch32-metapac = { path = "../ch32-data/build/ch32-metapac", features = [
+  "memory-x",
+  "rt",
+] }
 qingke = { version = "0.1.11" }
 qingke-rt = { version = "0.1.11" }
 panic-halt = "0.2.0"
