@@ -16,7 +16,7 @@ fn main() -> ! {
 
     println!("Starting init CAN silent loopback mode.");
 
-    match can::init_silent_loopback() {
+    match can::initialize(can::CanMode::SILENT_LOOPBACK) {
         Ok(_) => println!("Initialized CAN in silent loopback mode."),
         Err(msg) => {
             println!("Error initializing CAN: {msg}");

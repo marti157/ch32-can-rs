@@ -2,8 +2,33 @@ use ch32_metapac as pac;
 
 use pac::{CAN, RCC};
 
+pub struct CanMode {
+    /// Loopback mode setting
+    lbkm: bool,
+    /// Silent mode setting
+    silm: bool,
+}
+
+impl CanMode {
+    pub const NORMAL: CanMode = CanMode {
+        lbkm: false,
+        silm: false,
+    };
+    pub const SILENT: CanMode = CanMode {
+        lbkm: false,
+        silm: true,
+    };
+    pub const LOOPBACK: CanMode = CanMode {
+        lbkm: true,
+        silm: false,
+    };
+    pub const SILENT_LOOPBACK: CanMode = CanMode {
+        lbkm: true,
+        silm: true,
+    };
+}
+
 const CAN_INAK_TIMEOUT: u32 = 0x0000FFFF;
-const CAN_MODE_SILENT_LOOPBACK: u8 = 0x3;
 const CAN_SJW: u8 = 0b00;
 const CAN_TQBS1: u8 = 0b000;
 const CAN_TQBS2: u8 = 0b000;
@@ -27,7 +52,7 @@ fn init_default_filter() {
     CAN.fctlr().modify(|w| w.set_finit(false)); // Exit filter init mode
 }
 
-pub fn init_silent_loopback() -> Result<(), &'static str> {
+pub fn initialize(mode: CanMode) -> Result<(), &'static str> {
     RCC.apb2pcenr().modify(|w| {
         w.set_iopben(true); // Enable clock to PORTB
         w.set_afioen(true); // Enable AFIO
@@ -55,8 +80,8 @@ pub fn init_silent_loopback() -> Result<(), &'static str> {
         w.set_ts1(CAN_TQBS1); // Set CAN1 time quantum in bit segment 1
         w.set_ts2(CAN_TQBS2); // Set CAN1 time quantum in bit segment 2
         w.set_sjw(CAN_SJW); // Set CAN1 resync jump width
-        w.set_lbkm(CAN_MODE_SILENT_LOOPBACK & 1 == 1); // Set silent mode bit from mode
-        w.set_silm(CAN_MODE_SILENT_LOOPBACK >> 1 == 1); // Set loopback mode bit from mode
+        w.set_lbkm(mode.lbkm); // Set silent mode bit from mode
+        w.set_silm(mode.silm); // Set loopback mode bit from mode
     });
 
     CAN.ctlr().modify(|w| w.set_inrq(false)); // Request exit init mode
