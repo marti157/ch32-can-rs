@@ -1,5 +1,7 @@
-use ch32_metapac as pac;
+#![no_std]
+#![no_main]
 
+use ch32_metapac as pac;
 use pac::{CAN, RCC};
 
 pub struct CanMode {

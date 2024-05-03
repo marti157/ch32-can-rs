@@ -1,0 +1,19 @@
+[package]
+name = "ch32-can-rs-silent-loopback"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ch32-can-rs = { path = "../../" }
+ch32-hal = { path = "../../../ch32-hal", features = [
+    "ch32v208wbu6",
+    "defmt",
+    "embassy",
+], default-features = false }
+qingke = { version = "0.1.11" }
+qingke-rt = { version = "0.1.11" }
+panic-halt = "0.2.0"
+
+[[bin]]
+name = "silent_loopback"
+path = "main.rs"

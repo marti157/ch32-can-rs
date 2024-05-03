@@ -1,11 +1,9 @@
 #![no_std]
 #![no_main]
 
-mod can;
-
 use hal::println;
 use qingke::riscv;
-use {ch32_hal as hal, panic_halt as _};
+use {ch32_can_rs as can, ch32_hal as hal, panic_halt as _};
 
 #[qingke_rt::entry]
 fn main() -> ! {
