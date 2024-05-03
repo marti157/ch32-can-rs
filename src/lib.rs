@@ -30,13 +30,25 @@ impl CanMode {
     };
 }
 
+pub enum CanFifo {
+    FIFO0 = 0,
+    FIFO1 = 1,
+}
+
+impl CanFifo {
+    fn val(&self) -> usize {
+        match self {
+            CanFifo::FIFO0 => 0,
+            CanFifo::FIFO1 => 1,
+        }
+    }
+}
+
 const CAN_INAK_TIMEOUT: u32 = 0x0000FFFF;
 const CAN_SJW: u8 = 0b00;
 const CAN_TQBS1: u8 = 0b000;
 const CAN_TQBS2: u8 = 0b000;
 const CAN_PRESCALER: u16 = 12;
-pub const CAN_FIFO_0: usize = 0x00;
-pub const CAN_FIFO_1: usize = 0x01;
 
 fn init_default_filter() {
     let filter_num = 1;
@@ -118,11 +130,10 @@ pub fn send_message_mbox0(message: u64, stid: u16) {
     });
 }
 
-pub fn receive_message_no_checks(fifo_num: usize) -> Option<u64> {
-    let num_pending_messages = match fifo_num {
-        CAN_FIFO_0 => CAN.rfifo0().read().fmp0(),
-        CAN_FIFO_1 => CAN.rfifo1().read().fmp1(),
-        _ => 0,
+pub fn receive_message_no_checks(fifo: CanFifo) -> Option<u64> {
+    let num_pending_messages = match fifo {
+        CanFifo::FIFO0 => CAN.rfifo0().read().fmp0(),
+        CanFifo::FIFO1 => CAN.rfifo1().read().fmp1(),
     };
 
     if num_pending_messages == 0 {
@@ -131,13 +142,12 @@ pub fn receive_message_no_checks(fifo_num: usize) -> Option<u64> {
 
     // No message length checks
     let received_message: u64 =
-        ((CAN.rxmdhr(fifo_num).read().0 as u64) << 32) | CAN.rxmdlr(fifo_num).read().0 as u64;
+        ((CAN.rxmdhr(fifo.val()).read().0 as u64) << 32) | CAN.rxmdlr(fifo.val()).read().0 as u64;
 
     // Release FIFO
-    match fifo_num {
-        CAN_FIFO_0 => CAN.rfifo0().modify(|w| w.set_rfom0(true)),
-        CAN_FIFO_1 => CAN.rfifo1().modify(|w| w.set_rfom1(true)),
-        _ => (),
+    match fifo {
+        CanFifo::FIFO0 => CAN.rfifo0().modify(|w| w.set_rfom0(true)),
+        CanFifo::FIFO1 => CAN.rfifo1().modify(|w| w.set_rfom1(true)),
     }
 
     Some(received_message)

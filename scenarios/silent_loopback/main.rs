@@ -33,7 +33,7 @@ fn main() -> ! {
         println!("Sent CAN message.");
 
         println!("Read CAN message:");
-        match can::receive_message_no_checks(can::CAN_FIFO_1) {
+        match can::receive_message_no_checks(can::CanFifo::FIFO1) {
             None => println!("No message."),
             Some(recv_msg) => println!("0x{:x}", recv_msg),
         }
