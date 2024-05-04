@@ -4,7 +4,14 @@
 use ch32_metapac as pac;
 use pac::{CAN, RCC};
 
-pub struct CanMode {
+pub enum CanMode {
+    Normal,
+    Silent,
+    Loopback,
+    SilentLoopback,
+}
+
+struct CanModeRegs {
     /// Loopback mode setting
     lbkm: bool,
     /// Silent mode setting
@@ -12,34 +19,38 @@ pub struct CanMode {
 }
 
 impl CanMode {
-    pub const NORMAL: CanMode = CanMode {
-        lbkm: false,
-        silm: false,
-    };
-    pub const SILENT: CanMode = CanMode {
-        lbkm: false,
-        silm: true,
-    };
-    pub const LOOPBACK: CanMode = CanMode {
-        lbkm: true,
-        silm: false,
-    };
-    pub const SILENT_LOOPBACK: CanMode = CanMode {
-        lbkm: true,
-        silm: true,
-    };
+    fn regs(&self) -> CanModeRegs {
+        match self {
+            CanMode::Normal => CanModeRegs {
+                lbkm: false,
+                silm: false,
+            },
+            CanMode::Silent => CanModeRegs {
+                lbkm: false,
+                silm: true,
+            },
+            CanMode::Loopback => CanModeRegs {
+                lbkm: true,
+                silm: false,
+            },
+            CanMode::SilentLoopback => CanModeRegs {
+                lbkm: true,
+                silm: true,
+            },
+        }
+    }
 }
 
 pub enum CanFifo {
-    FIFO0 = 0,
-    FIFO1 = 1,
+    Fifo0,
+    Fifo1,
 }
 
 impl CanFifo {
     fn val(&self) -> usize {
         match self {
-            CanFifo::FIFO0 => 0,
-            CanFifo::FIFO1 => 1,
+            CanFifo::Fifo0 => 0,
+            CanFifo::Fifo1 => 1,
         }
     }
 }
@@ -89,8 +100,8 @@ impl Can {
             w.set_ts1(CAN_TQBS1); // Set CAN1 time quantum in bit segment 1
             w.set_ts2(CAN_TQBS2); // Set CAN1 time quantum in bit segment 2
             w.set_sjw(CAN_SJW); // Set CAN1 resync jump width
-            w.set_lbkm(mode.lbkm); // Set silent mode bit from mode
-            w.set_silm(mode.silm); // Set loopback mode bit from mode
+            w.set_lbkm(mode.regs().lbkm); // Set silent mode bit from mode
+            w.set_silm(mode.regs().silm); // Set loopback mode bit from mode
         });
 
         CAN.ctlr().modify(|w| w.set_inrq(false)); // Request exit init mode
@@ -121,7 +132,7 @@ impl Can {
         CAN.fr(filter_num * 2 + 1)
             .write_value(pac::can::regs::Fr(0x0000)); // Not masking any bits
         CAN.fmcfgr().modify(|w| w.set_fbm(filter_num, false)); // Set filter 1 to mask bit mode (0)
-        CAN.fafifor().modify(|w| w.set_ffa(filter_num, true)); // Associate FIFO1 to filter 1
+        CAN.fafifor().modify(|w| w.set_ffa(filter_num, true)); // Associate Fifo1 to filter 1
         CAN.fwr().modify(|w| w.set_fact(filter_num, true)); // Activate filter 1
         CAN.fctlr().modify(|w| w.set_finit(false)); // Exit filter init mode
     }
@@ -143,8 +154,8 @@ impl Can {
 
     pub fn receive_message_no_checks(&self) -> Option<u64> {
         let num_pending_messages = match self.fifo {
-            CanFifo::FIFO0 => CAN.rfifo0().read().fmp0(),
-            CanFifo::FIFO1 => CAN.rfifo1().read().fmp1(),
+            CanFifo::Fifo0 => CAN.rfifo0().read().fmp0(),
+            CanFifo::Fifo1 => CAN.rfifo1().read().fmp1(),
         };
 
         if num_pending_messages == 0 {
@@ -157,8 +168,8 @@ impl Can {
 
         // Release FIFO
         match self.fifo {
-            CanFifo::FIFO0 => CAN.rfifo0().modify(|w| w.set_rfom0(true)),
-            CanFifo::FIFO1 => CAN.rfifo1().modify(|w| w.set_rfom1(true)),
+            CanFifo::Fifo0 => CAN.rfifo0().modify(|w| w.set_rfom0(true)),
+            CanFifo::Fifo1 => CAN.rfifo1().modify(|w| w.set_rfom1(true)),
         }
 
         Some(received_message)
