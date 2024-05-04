@@ -67,10 +67,6 @@ fn init_default_filter() {
 }
 
 pub fn initialize(mode: CanMode) -> Result<(), &'static str> {
-    RCC.apb2pcenr().modify(|w| {
-        w.set_iopben(true); // Enable clock to PORTB
-        w.set_afioen(true); // Enable AFIO
-    });
     RCC.apb1pcenr().modify(|w| w.set_can1en(true)); // Enable CAN1 peripheral
 
     CAN.ctlr().modify(|w| {
