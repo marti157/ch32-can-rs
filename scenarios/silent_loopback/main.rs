@@ -25,7 +25,9 @@ fn main() -> ! {
         }
     }
 
-    println!("Init CAN silent loopback mode OK.");
+    can.add_filter(Default::default());
+
+    println!("Init CAN silent loopback mode & adding filter OK.");
 
     let mut msg: u64 = 0x0123456789ABCDEF;
 

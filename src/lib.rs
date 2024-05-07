@@ -53,6 +53,66 @@ impl CanFifo {
             CanFifo::Fifo1 => 1,
         }
     }
+
+    fn val_bool(&self) -> bool {
+        match self {
+            CanFifo::Fifo0 => false,
+            CanFifo::Fifo1 => true,
+        }
+    }
+}
+
+pub enum CanFilterMode {
+    /// Matches the incoming ID to a predefined value after applying a predefined bit mask.
+    IdMask,
+    /// Matches the incoming ID to a predefined set of values.
+    IdList,
+}
+
+impl CanFilterMode {
+    fn val_bool(&self) -> bool {
+        match self {
+            CanFilterMode::IdMask => false,
+            CanFilterMode::IdList => true,
+        }
+    }
+}
+
+/// See table 24-1 of the reference manual for more details on filtering and modes.
+pub struct CanFilter {
+    /// Filter bank number, 0-27
+    bank: usize,
+    /// Filter mode, either identifier mask or identifier list
+    mode: CanFilterMode,
+    /// Values for `STID:EXID:IDE:RTR:0` from msb to lsb to be matched with an incoming message's values.
+    /// In IdList mode, value should be a 32-bit id or two 16-bit ids.
+    id_value: u32,
+    /// Bit mask to be applied to incoming message before comparing it to a predefined value.
+    /// In IdList mode, this is used in the same way as `id_value` is.
+    id_mask: u32,
+}
+
+impl CanFilter {
+    /// Offset in `usize` for bank `n` filter register 1
+    fn fr_id_value_reg(&self) -> usize {
+        self.bank * 2 + 0
+    }
+
+    /// Offset in `usize` for bank `n` filter register 2
+    fn fr_id_mask_reg(&self) -> usize {
+        self.bank * 2 + 1
+    }
+}
+
+impl Default for CanFilter {
+    fn default() -> Self {
+        Self {
+            bank: 0,
+            mode: CanFilterMode::IdMask,
+            id_value: 0,
+            id_mask: 0,
+        }
+    }
 }
 
 const CAN_INAK_TIMEOUT: u32 = 0x0000FFFF;
@@ -67,15 +127,19 @@ pub struct Can {
 
 impl Can {
     pub fn new(fifo: CanFifo) -> Self {
-        Self::enable();
+        let new_can = Self { fifo };
+        new_can.enable();
 
-        Self { fifo }
+        new_can
     }
 
-    fn enable() {
+    fn enable(&self) {
         RCC.apb1pcenr().modify(|w| w.set_can1en(true)); // Enable CAN1 peripheral
     }
 
+    /// Initialize CAN peripheral in a certain mode.
+    ///
+    /// Requires adding a filter before use. See the `add_filter` method.
     pub fn init_mode(&self, mode: CanMode) -> Result<(), &'static str> {
         RCC.apb1pcenr().modify(|w| w.set_can1en(true)); // Enable CAN1 peripheral
 
@@ -116,24 +180,22 @@ impl Can {
             return Err("CAN peripheral did not exit initialization mode");
         }
 
-        self.init_default_filter();
-
         Ok(())
     }
 
-    fn init_default_filter(&self) {
-        let filter_num = 1;
-
+    pub fn add_filter(&self, filter: CanFilter) {
         CAN.fctlr().modify(|w| w.set_finit(true)); // Enable filter init mode
-        CAN.fwr().modify(|w| w.set_fact(filter_num, true)); // Activate filter 1 in filter bank
-        CAN.fscfgr().modify(|w| w.set_fsc(filter_num, true)); // Set register of filter 1 to single 32-bit
-        CAN.fr(filter_num * 2 + 0)
-            .write_value(pac::can::regs::Fr(0b110)); // Masking bits in identifier: 110
-        CAN.fr(filter_num * 2 + 1)
-            .write_value(pac::can::regs::Fr(0x0000)); // Not masking any bits
-        CAN.fmcfgr().modify(|w| w.set_fbm(filter_num, false)); // Set filter 1 to mask bit mode (0)
-        CAN.fafifor().modify(|w| w.set_ffa(filter_num, true)); // Associate Fifo1 to filter 1
-        CAN.fwr().modify(|w| w.set_fact(filter_num, true)); // Activate filter 1
+        CAN.fwr().modify(|w| w.set_fact(filter.bank, true)); // Activate new filter in filter bank
+        CAN.fscfgr().modify(|w| w.set_fsc(filter.bank, true)); // Set filter scale config to single 32-bit (16-bit not implemented)
+        CAN.fr(filter.fr_id_value_reg())
+            .write_value(pac::can::regs::Fr(filter.id_value)); // Set filter's id value to match/mask
+        CAN.fr(filter.fr_id_mask_reg())
+            .write_value(pac::can::regs::Fr(filter.id_mask)); // Set filter's id bits to mask
+        CAN.fmcfgr()
+            .modify(|w| w.set_fbm(filter.bank, filter.mode.val_bool())); // Set new filter's operating mode
+        CAN.fafifor()
+            .modify(|w| w.set_ffa(filter.bank, self.fifo.val_bool())); // Associate CAN's FIFO to new filter
+        CAN.fwr().modify(|w| w.set_fact(filter.bank, true)); // Activate new filter
         CAN.fctlr().modify(|w| w.set_finit(false)); // Exit filter init mode
     }
 
