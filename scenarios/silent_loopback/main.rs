@@ -38,9 +38,9 @@ fn main() -> ! {
         println!("Sent CAN message.");
 
         println!("Read CAN message:");
-        match can.receive_message_no_checks() {
+        match can.receive_message() {
             None => println!("No message."),
-            Some(recv_msg) => println!("0x{:x}", recv_msg),
+            Some(recv_msg) => println!("0x{:?}", recv_msg),
         }
 
         msg = msg.wrapping_mul(2);

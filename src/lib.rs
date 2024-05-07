@@ -115,6 +115,18 @@ impl Default for CanFilter {
     }
 }
 
+#[derive(Debug)]
+pub struct RxMessage {
+    /// Message length in bytes, 1-8
+    pub length: u8,
+    /// Filter bank that matched the message, 0-27
+    pub filter: u8,
+    /// Identifier used in message
+    pub id: u16,
+    /// Message data up to `length` bytes, 0 after that
+    pub data: [u8; 8],
+}
+
 const CAN_INAK_TIMEOUT: u32 = 0x0000FFFF;
 const CAN_SJW: u8 = 0b00;
 const CAN_TQBS1: u8 = 0b000;
@@ -214,19 +226,33 @@ impl Can {
         });
     }
 
-    pub fn receive_message_no_checks(&self) -> Option<u64> {
+    pub fn receive_message(&self) -> Option<RxMessage> {
         let num_pending_messages = match self.fifo {
             CanFifo::Fifo0 => CAN.rfifo0().read().fmp0(),
             CanFifo::Fifo1 => CAN.rfifo1().read().fmp1(),
         };
-
         if num_pending_messages == 0 {
             return None;
         }
 
-        // No message length checks
-        let received_message: u64 = ((CAN.rxmdhr(self.fifo.val()).read().0 as u64) << 32)
+        let rx_message_unordered: u64 = ((CAN.rxmdhr(self.fifo.val()).read().0 as u64) << 32)
             | CAN.rxmdlr(self.fifo.val()).read().0 as u64;
+
+        let mut message = RxMessage {
+            length: CAN.rxmdtr(self.fifo.val()).read().dlc(),
+            filter: CAN.rxmdtr(self.fifo.val()).read().fmi(),
+            id: CAN.rxmir(self.fifo.val()).read().stid(),
+            data: [0; 8],
+        };
+
+        message
+            .data
+            .iter_mut()
+            .take(message.length as usize)
+            .enumerate()
+            .for_each(|(i, byte)| {
+                *byte = ((rx_message_unordered >> (i * 8)) & 0xFF) as u8;
+            });
 
         // Release FIFO
         match self.fifo {
@@ -234,6 +260,6 @@ impl Can {
             CanFifo::Fifo1 => CAN.rfifo1().modify(|w| w.set_rfom1(true)),
         }
 
-        Some(received_message)
+        Some(message)
     }
 }
