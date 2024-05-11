@@ -12,6 +12,7 @@ dependencies = [
 [[package]]
 name = "ch32-metapac"
 version = "0.1.0"
+source = "git+https://github.com/ch32-rs/ch32-metapac.git?tag=ch32-data-038b858b45b9b92f4758318f1d746b82427897e9#5c4b205adff3eb934b4505410b53c082df6e07c8"
 dependencies = [
  "riscv",
  "vcell",
