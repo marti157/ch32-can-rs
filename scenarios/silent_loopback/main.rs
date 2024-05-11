@@ -29,12 +29,12 @@ fn main() -> ! {
 
     println!("Init CAN silent loopback mode & adding filter OK.");
 
-    let mut msg: u64 = 0x0123456789ABCDEF;
+    let mut msg: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
 
     loop {
         riscv::asm::delay(50000000);
 
-        can.send_message_mbox0(msg, 0x317);
+        can.send_message_no_checks(&msg, 0x317);
         println!("Sent CAN message.");
 
         println!("Read CAN message:");
@@ -43,6 +43,8 @@ fn main() -> ! {
             Some(recv_msg) => println!("0x{:?}", recv_msg),
         }
 
-        msg = msg.wrapping_mul(2);
+        msg.iter_mut().for_each(|byte| {
+            *byte = byte.wrapping_add(1);
+        });
     }
 }

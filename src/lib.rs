@@ -211,13 +211,23 @@ impl Can {
         CAN.fctlr().modify(|w| w.set_finit(false)); // Exit filter init mode
     }
 
-    pub fn send_message_mbox0(&self, message: u64, stid: u16) {
+    pub fn send_message_no_checks(&self, message: &[u8; 8], stid: u16) {
         let mailbox_num: usize = 0;
+
+        let tx_data_high: u32 = ((message[7] as u32) << 24)
+            | ((message[6] as u32) << 16)
+            | ((message[5] as u32) << 8)
+            | message[4] as u32;
+        let tx_data_low: u32 = ((message[3] as u32) << 24)
+            | ((message[2] as u32) << 16)
+            | ((message[1] as u32) << 8)
+            | message[0] as u32;
+
         CAN.txmdtr(mailbox_num).modify(|w| w.set_dlc(8)); // Set message length in bytes
         CAN.txmdhr(mailbox_num)
-            .write_value(pac::can::regs::Txmdhr((message >> 32) as u32));
+            .write_value(pac::can::regs::Txmdhr(tx_data_high));
         CAN.txmdlr(mailbox_num)
-            .write_value(pac::can::regs::Txmdlr((message & 0xFFFFFFFF) as u32));
+            .write_value(pac::can::regs::Txmdlr(tx_data_low));
         CAN.txmir(mailbox_num)
             .write_value(pac::can::regs::Txmir(0x0)); // Clear CAN1 TXMIR register
         CAN.txmir(mailbox_num).modify(|w| {
