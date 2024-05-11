@@ -30,7 +30,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 name = "ch32-can-rs"
 version = "0.1.0"
 dependencies = [
- "ch32-metapac",
+ "ch32-metapac 0.1.0 (git+https://github.com/ch32-rs/ch32-metapac.git?tag=ch32-data-038b858b45b9b92f4758318f1d746b82427897e9)",
 ]
 
 [[package]]
@@ -47,8 +47,9 @@ dependencies = [
 [[package]]
 name = "ch32-hal"
 version = "0.1.0"
+source = "git+https://github.com/ch32-rs/ch32-hal.git?rev=01d6564b0bf0cf05ecc8baabea4b245c0089dd5a#01d6564b0bf0cf05ecc8baabea4b245c0089dd5a"
 dependencies = [
- "ch32-metapac",
+ "ch32-metapac 0.1.0 (git+https://github.com/ch32-rs/ch32-metapac.git?tag=ch32-data-b6fa48d43f467e8e87ea826c2979ada86e0e6f02)",
  "critical-section",
  "defmt",
  "embassy-futures",
@@ -71,6 +72,16 @@ dependencies = [
 [[package]]
 name = "ch32-metapac"
 version = "0.1.0"
+source = "git+https://github.com/ch32-rs/ch32-metapac.git?tag=ch32-data-038b858b45b9b92f4758318f1d746b82427897e9#5c4b205adff3eb934b4505410b53c082df6e07c8"
+dependencies = [
+ "riscv",
+ "vcell",
+]
+
+[[package]]
+name = "ch32-metapac"
+version = "0.1.0"
+source = "git+https://github.com/ch32-rs/ch32-metapac.git?tag=ch32-data-b6fa48d43f467e8e87ea826c2979ada86e0e6f02#716ddc7415c7cdb429b95376ce1738ed95162f2b"
 dependencies = [
  "riscv",
  "vcell",
