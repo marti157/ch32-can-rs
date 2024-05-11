@@ -9,9 +9,10 @@ ch32-hal = { path = "../../../ch32-hal", features = [
     "ch32v208wbu6",
     "defmt",
     "embassy",
+    "rt",
 ], default-features = false }
-qingke = { version = "0.1.11" }
-qingke-rt = { version = "0.1.11" }
+qingke = { version = "0.2.0" }
+qingke-rt = { version = "0.2.0" }
 panic-halt = "0.2.0"
 
 [[bin]]

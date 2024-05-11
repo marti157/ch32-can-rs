@@ -70,7 +70,7 @@ dependencies = [
 
 [[package]]
 name = "ch32-metapac"
-version = "0.0.5"
+version = "0.1.0"
 dependencies = [
  "riscv",
  "vcell",
@@ -391,9 +391,9 @@ dependencies = [
 
 [[package]]
 name = "qingke"
-version = "0.1.12"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8fb078075c91dabadd43126a109ab96c0899777299d07bf3ff3bebe29a365b0"
+checksum = "42a9bbdb31ef9edd7d73dcc21b98945d032d2d18423b62ef0565539957a127f1"
 dependencies = [
  "bit_field",
  "critical-section",
@@ -402,9 +402,9 @@ dependencies = [
 
 [[package]]
 name = "qingke-rt"
-version = "0.1.12"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4980a258182089154893e933637226d64e1f08f97d3b394da39d2ef5fb844a9"
+checksum = "a81bc137319a922b2a97f9e04ae0c00709f69588f7e29d425f9f88f7b9a42f79"
 dependencies = [
  "qingke",
  "qingke-rt-macros",
@@ -412,9 +412,9 @@ dependencies = [
 
 [[package]]
 name = "qingke-rt-macros"
-version = "0.1.12"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "113778133248e1cabb070532e9d523349abb50491d705c358edfb842ca991f25"
+checksum = "3270f6d3f814bc602390f99b24d22e18f416fbcd20d05968a1ccb080a62f2b4f"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",

@@ -2,7 +2,7 @@
 #![no_main]
 
 use ch32_metapac as pac;
-use pac::{CAN, RCC};
+use pac::{CAN1, RCC};
 
 pub enum CanMode {
     Normal,
@@ -155,23 +155,23 @@ impl Can {
     pub fn init_mode(&self, mode: CanMode) -> Result<(), &'static str> {
         RCC.apb1pcenr().modify(|w| w.set_can1en(true)); // Enable CAN1 peripheral
 
-        CAN.ctlr().modify(|w| {
+        CAN1.ctlr().modify(|w| {
             w.set_sleep(false); // Wake up
             w.set_inrq(true); // Request enter init mode
         });
 
         let mut wait_ack: u32 = 0;
         // Wait until CAN is in init mode
-        while !CAN.statr().read().inak() && wait_ack < CAN_INAK_TIMEOUT {
+        while !CAN1.statr().read().inak() && wait_ack < CAN_INAK_TIMEOUT {
             wait_ack += 1;
         }
 
-        if !CAN.statr().read().inak() {
+        if !CAN1.statr().read().inak() {
             return Err("CAN peripheral did not enter initialization mode");
         }
 
         // CAN baud rate is: CANbps=PCLK1/((TQBS1+TQBS2+3)*(PRESCALER+1))
-        CAN.btimr().modify(|w| {
+        CAN1.btimr().modify(|w| {
             w.set_brp(CAN_PRESCALER - 1); // Set CAN1 time quantum length
             w.set_ts1(CAN_TQBS1); // Set CAN1 time quantum in bit segment 1
             w.set_ts2(CAN_TQBS2); // Set CAN1 time quantum in bit segment 2
@@ -180,15 +180,15 @@ impl Can {
             w.set_silm(mode.regs().silm); // Set loopback mode bit from mode
         });
 
-        CAN.ctlr().modify(|w| w.set_inrq(false)); // Request exit init mode
+        CAN1.ctlr().modify(|w| w.set_inrq(false)); // Request exit init mode
 
         wait_ack = 0;
         // Wait until CAN is no longer in init mode
-        while CAN.statr().read().inak() && wait_ack < CAN_INAK_TIMEOUT {
+        while CAN1.statr().read().inak() && wait_ack < CAN_INAK_TIMEOUT {
             wait_ack += 1;
         }
 
-        if CAN.statr().read().inak() {
+        if CAN1.statr().read().inak() {
             return Err("CAN peripheral did not exit initialization mode");
         }
 
@@ -196,19 +196,19 @@ impl Can {
     }
 
     pub fn add_filter(&self, filter: CanFilter) {
-        CAN.fctlr().modify(|w| w.set_finit(true)); // Enable filter init mode
-        CAN.fwr().modify(|w| w.set_fact(filter.bank, true)); // Activate new filter in filter bank
-        CAN.fscfgr().modify(|w| w.set_fsc(filter.bank, true)); // Set filter scale config to single 32-bit (16-bit not implemented)
-        CAN.fr(filter.fr_id_value_reg())
+        CAN1.fctlr().modify(|w| w.set_finit(true)); // Enable filter init mode
+        CAN1.fwr().modify(|w| w.set_fact(filter.bank, true)); // Activate new filter in filter bank
+        CAN1.fscfgr().modify(|w| w.set_fsc(filter.bank, true)); // Set filter scale config to single 32-bit (16-bit not implemented)
+        CAN1.fr(filter.fr_id_value_reg())
             .write_value(pac::can::regs::Fr(filter.id_value)); // Set filter's id value to match/mask
-        CAN.fr(filter.fr_id_mask_reg())
+        CAN1.fr(filter.fr_id_mask_reg())
             .write_value(pac::can::regs::Fr(filter.id_mask)); // Set filter's id bits to mask
-        CAN.fmcfgr()
+        CAN1.fmcfgr()
             .modify(|w| w.set_fbm(filter.bank, filter.mode.val_bool())); // Set new filter's operating mode
-        CAN.fafifor()
+        CAN1.fafifor()
             .modify(|w| w.set_ffa(filter.bank, self.fifo.val_bool())); // Associate CAN's FIFO to new filter
-        CAN.fwr().modify(|w| w.set_fact(filter.bank, true)); // Activate new filter
-        CAN.fctlr().modify(|w| w.set_finit(false)); // Exit filter init mode
+        CAN1.fwr().modify(|w| w.set_fact(filter.bank, true)); // Activate new filter
+        CAN1.fctlr().modify(|w| w.set_finit(false)); // Exit filter init mode
     }
 
     pub fn send_message_no_checks(&self, message: &[u8; 8], stid: u16) {
@@ -223,35 +223,32 @@ impl Can {
             | ((message[1] as u32) << 8)
             | message[0] as u32;
 
-        CAN.txmdtr(mailbox_num).modify(|w| w.set_dlc(8)); // Set message length in bytes
-        CAN.txmdhr(mailbox_num)
+        CAN1.txmdtr(mailbox_num).modify(|w| w.set_dlc(8)); // Set message length in bytes
+        CAN1.txmdhr(mailbox_num)
             .write_value(pac::can::regs::Txmdhr(tx_data_high));
-        CAN.txmdlr(mailbox_num)
+        CAN1.txmdlr(mailbox_num)
             .write_value(pac::can::regs::Txmdlr(tx_data_low));
-        CAN.txmir(mailbox_num)
+        CAN1.txmir(mailbox_num)
             .write_value(pac::can::regs::Txmir(0x0)); // Clear CAN1 TXMIR register
-        CAN.txmir(mailbox_num).modify(|w| {
+        CAN1.txmir(mailbox_num).modify(|w| {
             w.set_stid(stid); // Using CAN Standard ID for message
             w.set_txrq(true); // Initiate mailbox transfer request
         });
     }
 
     pub fn receive_message(&self) -> Option<RxMessage> {
-        let num_pending_messages = match self.fifo {
-            CanFifo::Fifo0 => CAN.rfifo0().read().fmp0(),
-            CanFifo::Fifo1 => CAN.rfifo1().read().fmp1(),
-        };
+        let num_pending_messages = CAN1.rfifo(self.fifo.val()).read().fmp();
         if num_pending_messages == 0 {
             return None;
         }
 
-        let rx_message_unordered: u64 = ((CAN.rxmdhr(self.fifo.val()).read().0 as u64) << 32)
-            | CAN.rxmdlr(self.fifo.val()).read().0 as u64;
+        let rx_message_unordered: u64 = ((CAN1.rxmdhr(self.fifo.val()).read().0 as u64) << 32)
+            | CAN1.rxmdlr(self.fifo.val()).read().0 as u64;
 
         let mut message = RxMessage {
-            length: CAN.rxmdtr(self.fifo.val()).read().dlc(),
-            filter: CAN.rxmdtr(self.fifo.val()).read().fmi(),
-            id: CAN.rxmir(self.fifo.val()).read().stid(),
+            length: CAN1.rxmdtr(self.fifo.val()).read().dlc(),
+            filter: CAN1.rxmdtr(self.fifo.val()).read().fmi(),
+            id: CAN1.rxmir(self.fifo.val()).read().stid(),
             data: [0; 8],
         };
 
@@ -265,10 +262,7 @@ impl Can {
             });
 
         // Release FIFO
-        match self.fifo {
-            CanFifo::Fifo0 => CAN.rfifo0().modify(|w| w.set_rfom0(true)),
-            CanFifo::Fifo1 => CAN.rfifo1().modify(|w| w.set_rfom1(true)),
-        }
+        CAN1.rfifo(self.fifo.val()).modify(|w| w.set_rfom(true));
 
         Some(message)
     }
