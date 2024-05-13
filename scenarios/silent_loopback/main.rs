@@ -40,7 +40,7 @@ fn main() -> ! {
         println!("Read CAN message:");
         match can.receive_message() {
             None => println!("No message."),
-            Some(recv_msg) => println!("0x{:?}", recv_msg),
+            Some(recv_msg) => println!("Received: {:?}", recv_msg),
         }
 
         msg.iter_mut().for_each(|byte| {

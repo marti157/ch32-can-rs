@@ -6,6 +6,7 @@ use hal::println;
 use qingke::riscv;
 use {ch32_hal as hal, panic_halt as _};
 
+#[derive(PartialEq)]
 enum ScenarioMode {
     Receive,
     Transmit,
@@ -36,9 +37,32 @@ fn main() -> ! {
 
     println!("Init CAN normal mode & adding filter OK.");
 
-    loop {
-        riscv::asm::delay(50000000);
+    if SCENARIO_MODE == ScenarioMode::Transmit {
+        let mut msg: [u8; 8] = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF];
 
-        println!("Hello world!");
+        loop {
+            riscv::asm::delay(50000000);
+
+            can.send_message_no_checks(&msg, 0x317);
+            println!("Sent CAN message: {:?}", msg);
+
+            msg.iter_mut().for_each(|byte| {
+                *byte = byte.wrapping_add(1);
+            });
+        }
     }
+
+    if SCENARIO_MODE == ScenarioMode::Receive {
+        loop {
+            riscv::asm::delay(50000000);
+
+            match can.receive_message() {
+                None => println!("No message."),
+                Some(recv_msg) => println!("Received: {:?}", recv_msg),
+            }
+        }
+    }
+
+    println!("Scenario mode not set.");
+    loop {}
 }
