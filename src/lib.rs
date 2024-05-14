@@ -116,6 +116,22 @@ impl Default for CanFilter {
 }
 
 #[derive(Debug)]
+pub enum TxStatus {
+    /// Message was sent correctly
+    Sent,
+    /// Message wasn't sent correctly due to send timeout
+    Timeout,
+}
+
+#[derive(Debug)]
+pub struct TxResult {
+    /// Resulting status of message transmission
+    pub status: TxStatus,
+    /// Which mailbox was used to send the message, 0-3
+    pub mailbox: u8,
+}
+
+#[derive(Debug)]
 pub struct RxMessage {
     /// Message length in bytes, 1-8
     pub length: u8,
@@ -211,7 +227,8 @@ impl Can {
         CAN1.fctlr().modify(|w| w.set_finit(false)); // Exit filter init mode
     }
 
-    pub fn send_message_no_checks(&self, message: &[u8; 8], stid: u16) {
+    pub fn send_message_no_checks(&self, message: &[u8; 8], stid: u16) -> TxResult {
+        // TODO: determine mailbox num depending on emptiness
         let mailbox_num: usize = 0;
 
         let tx_data_high: u32 = ((message[7] as u32) << 24)
@@ -234,6 +251,11 @@ impl Can {
             w.set_stid(stid); // Using CAN Standard ID for message
             w.set_txrq(true); // Initiate mailbox transfer request
         });
+
+        TxResult {
+            status: TxStatus::Sent,
+            mailbox: mailbox_num as u8,
+        }
     }
 
     pub fn receive_message(&self) -> Option<RxMessage> {
@@ -252,6 +274,7 @@ impl Can {
             data: [0; 8],
         };
 
+        // Split rx_message into bytes
         message
             .data
             .iter_mut()
