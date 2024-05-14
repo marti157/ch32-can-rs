@@ -34,8 +34,8 @@ fn main() -> ! {
     loop {
         riscv::asm::delay(50000000);
 
-        can.send_message_no_checks(&msg, 0x317);
-        println!("Sent CAN message.");
+        let tx_result = can.send_message_no_checks(&msg, 0x317);
+        println!("Sent CAN message: {:?}", tx_result);
 
         println!("Read CAN message:");
         match can.receive_message() {

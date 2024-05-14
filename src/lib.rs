@@ -120,7 +120,11 @@ pub enum TxStatus {
     /// Message was sent correctly
     Sent,
     /// Message wasn't sent correctly due to send timeout
-    Timeout,
+    TimeoutError,
+    /// Message wasn't sent correctly due to arbitration
+    ArbitrationError,
+    /// Message wasn't sent correctly due to error
+    OtherError,
 }
 
 #[derive(Debug)]
@@ -143,7 +147,8 @@ pub struct RxMessage {
     pub data: [u8; 8],
 }
 
-const CAN_INAK_TIMEOUT: u32 = 0x0000FFFF;
+const CAN_INAK_TIMEOUT: u32 = 0xFFFF;
+const CAN_TX_TIMEOUT: u32 = 0xFFF;
 const CAN_SJW: u8 = 0b00;
 const CAN_TQBS1: u8 = 0b000;
 const CAN_TQBS2: u8 = 0b000;
@@ -227,6 +232,29 @@ impl Can {
         CAN1.fctlr().modify(|w| w.set_finit(false)); // Exit filter init mode
     }
 
+    fn transmit_status_blocking(&self, mailbox_num: usize) -> TxStatus {
+        let mut wait_status: u32 = 0;
+        while !CAN1.tstatr().read().txok(mailbox_num) && wait_status < CAN_TX_TIMEOUT {
+            wait_status += 1;
+        }
+        if wait_status == CAN_TX_TIMEOUT {
+            return TxStatus::TimeoutError;
+        }
+
+        let tx_result = CAN1.tstatr().read();
+        if tx_result.txok(mailbox_num) {
+            return TxStatus::Sent;
+        }
+        if tx_result.alst(mailbox_num) {
+            return TxStatus::ArbitrationError;
+        }
+        if tx_result.terr(mailbox_num) {
+            return TxStatus::OtherError;
+        }
+
+        TxStatus::OtherError
+    }
+
     pub fn send_message_no_checks(&self, message: &[u8; 8], stid: u16) -> TxResult {
         // TODO: determine mailbox num depending on emptiness
         let mailbox_num: usize = 0;
@@ -253,7 +281,7 @@ impl Can {
         });
 
         TxResult {
-            status: TxStatus::Sent,
+            status: self.transmit_status_blocking(mailbox_num),
             mailbox: mailbox_num as u8,
         }
     }

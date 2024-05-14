@@ -43,8 +43,8 @@ fn main() -> ! {
         loop {
             riscv::asm::delay(50000000);
 
-            can.send_message_no_checks(&msg, 0x317);
-            println!("Sent CAN message: {:?}", msg);
+            let tx_status = can.send_message_no_checks(&msg, 0x317);
+            println!("Sent CAN message {:?} with status {:?}", msg, tx_status);
 
             msg.iter_mut().for_each(|byte| {
                 *byte = byte.wrapping_add(1);
