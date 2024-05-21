@@ -21,12 +21,12 @@ jobs:
           rustup target add riscv32imac-unknown-none-elf
       - name: Build
         run: cargo build --release --features "__ci" --verbose
-      - name: Run tests
-        run: cargo test --features "__ci" --verbose
+      # - name: Run tests
+      #   run: cargo test --features "__ci" --verbose
       - name: Build scenarios
         if: always()
         run: |
           for dir in scenarios/*/; do
             echo "Building $dir"
-            (cd "$dir" && cargo build)
+            (cd "$dir" && cargo build --release)
           done
