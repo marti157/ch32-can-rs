@@ -1,5 +1,6 @@
 {
     "rust-analyzer.cargo.target": "riscv32imac-unknown-none-elf",
     "rust-analyzer.check.allTargets": false,
+    "rust-analyzer.cargo.features": ["__ci"],
     "editor.formatOnSave": true,
 }
