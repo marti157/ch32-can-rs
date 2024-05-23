@@ -4,34 +4,34 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-ch32v203c6t6 = ["ch32-metapac/ch32v203c6t6"]
-ch32v203c8t6 = ["ch32-metapac/ch32v203c8t6"]
-ch32v203c8u6 = ["ch32-metapac/ch32v203c8u6"]
-ch32v203f6p6 = ["ch32-metapac/ch32v203f6p6"]
-ch32v203g6u6 = ["ch32-metapac/ch32v203g6u6"]
-ch32v203g8r6 = ["ch32-metapac/ch32v203g8r6"]
-ch32v203k6t6 = ["ch32-metapac/ch32v203k6t6"]
-ch32v203k8t6 = ["ch32-metapac/ch32v203k8t6"]
-ch32v203rbt6 = ["ch32-metapac/ch32v203rbt6"]
-ch32v208cbu6 = ["ch32-metapac/ch32v208cbu6"]
-ch32v208gbu6 = ["ch32-metapac/ch32v208gbu6"]
-ch32v208rbt6 = ["ch32-metapac/ch32v208rbt6"]
-ch32v208wbu6 = ["ch32-metapac/ch32v208wbu6"]
-ch32v303cbt6 = ["ch32-metapac/ch32v303cbt6"]
-ch32v303rbt6 = ["ch32-metapac/ch32v303rbt6"]
-ch32v303rct6 = ["ch32-metapac/ch32v303rct6"]
-ch32v303vct6 = ["ch32-metapac/ch32v303vct6"]
-ch32v305fbp6 = ["ch32-metapac/ch32v305fbp6"]
-ch32v305gbu6 = ["ch32-metapac/ch32v305gbu6"]
-ch32v305rbt6 = ["ch32-metapac/ch32v305rbt6"]
-ch32v307rct6 = ["ch32-metapac/ch32v307rct6"]
-ch32v307vct6 = ["ch32-metapac/ch32v307vct6"]
-ch32v307wcu6 = ["ch32-metapac/ch32v307wcu6"]
+ch32v203c6t6 = ["ch32-hal/ch32v203c6t6"]
+ch32v203c8t6 = ["ch32-hal/ch32v203c8t6"]
+ch32v203c8u6 = ["ch32-hal/ch32v203c8u6"]
+ch32v203f6p6 = ["ch32-hal/ch32v203f6p6"]
+ch32v203g6u6 = ["ch32-hal/ch32v203g6u6"]
+ch32v203g8r6 = ["ch32-hal/ch32v203g8r6"]
+ch32v203k6t6 = ["ch32-hal/ch32v203k6t6"]
+ch32v203k8t6 = ["ch32-hal/ch32v203k8t6"]
+ch32v203rbt6 = ["ch32-hal/ch32v203rbt6"]
+ch32v208cbu6 = ["ch32-hal/ch32v208cbu6"]
+ch32v208gbu6 = ["ch32-hal/ch32v208gbu6"]
+ch32v208rbt6 = ["ch32-hal/ch32v208rbt6"]
+ch32v208wbu6 = ["ch32-hal/ch32v208wbu6"]
+ch32v303cbt6 = ["ch32-hal/ch32v303cbt6"]
+ch32v303rbt6 = ["ch32-hal/ch32v303rbt6"]
+ch32v303rct6 = ["ch32-hal/ch32v303rct6"]
+ch32v303vct6 = ["ch32-hal/ch32v303vct6"]
+ch32v305fbp6 = ["ch32-hal/ch32v305fbp6"]
+ch32v305gbu6 = ["ch32-hal/ch32v305gbu6"]
+ch32v305rbt6 = ["ch32-hal/ch32v305rbt6"]
+ch32v307rct6 = ["ch32-hal/ch32v307rct6"]
+ch32v307vct6 = ["ch32-hal/ch32v307vct6"]
+ch32v307wcu6 = ["ch32-hal/ch32v307wcu6"]
 # Private feature, only used in test/build
-__ci = ["ch32-metapac/ch32v208wbu6"]
+__ci = ["ch32-hal/ch32v208wbu6"]
 
 [dependencies]
-ch32-metapac = { features = [
-  "memory-x",
-  "rt",
-], git = "https://github.com/ch32-rs/ch32-metapac.git", tag = "ch32-data-3e5718747ccd2dc429be042f893ed90b581ce265" }
+ch32-hal = { default-features = false, features = [
+    "embassy",
+], git = "https://github.com/ch32-rs/ch32-hal.git", rev = "f17d8bab1f0161eb200276b33bfc2c39e184ff19" }
+ch32-metapac = { git = "https://github.com/ch32-rs/ch32-metapac.git", tag = "ch32-data-3e5718747ccd2dc429be042f893ed90b581ce265" }

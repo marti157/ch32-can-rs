@@ -1,9 +1,13 @@
 #![no_std]
 #![no_main]
 
+use ch32_hal as hal;
 use ch32_metapac as pac;
-use pac::{CAN1, RCC};
+use pac::{AFIO, CAN1, GPIOB, RCC};
 
+mod util;
+
+#[derive(PartialEq)]
 pub enum CanMode {
     Normal,
     Silent,
@@ -149,10 +153,6 @@ pub struct RxMessage {
 
 const CAN_INAK_TIMEOUT: u32 = 0xFFFF;
 const CAN_TX_TIMEOUT: u32 = 0xFFF;
-const CAN_SJW: u8 = 0b00;
-const CAN_TQBS1: u8 = 0b000;
-const CAN_TQBS2: u8 = 0b000;
-const CAN_PRESCALER: u16 = 12;
 
 pub struct Can {
     fifo: CanFifo,
@@ -170,11 +170,32 @@ impl Can {
         RCC.apb1pcenr().modify(|w| w.set_can1en(true)); // Enable CAN1 peripheral
     }
 
-    /// Initialize CAN peripheral in a certain mode.
+    /// CAN1_RX is mapped to PB8, and CAN1_TX is mapped to PB9
+    fn init_rm_portb(&self) {
+        RCC.apb2pcenr().modify(|w| {
+            w.set_iopben(true); // Enable clock to PORTB GPIO
+            w.set_afioen(true); // Enable AFIO
+        });
+
+        AFIO.pcfr1().modify(|w| w.set_can1_rm(0b10));
+
+        GPIOB.cfghr().modify(|w| {
+            // PB9 (CAN1_TX) is n = 1 of CFG high
+            w.set_cnf(1, pac::gpio::vals::Cnf::PULL_IN__AF_PUSH_PULL_OUT); // Output: PP
+            w.set_mode(1, pac::gpio::vals::Mode::OUTPUT_50MHZ);
+            // PB8 (CAN1_RX) is n = 0 of CFG high
+            w.set_cnf(0, pac::gpio::vals::Cnf::PULL_IN__AF_PUSH_PULL_OUT); // Input: IPU
+            w.set_mode(0, pac::gpio::vals::Mode::INPUT);
+        });
+    }
+
+    /// Initialize CAN peripheral in a certain mode and bitrate (in bps).
     ///
     /// Requires adding a filter before use. See the `add_filter` method.
-    pub fn init_mode(&self, mode: CanMode) -> Result<(), &'static str> {
-        RCC.apb1pcenr().modify(|w| w.set_can1en(true)); // Enable CAN1 peripheral
+    pub fn init_mode(&self, mode: CanMode, bitrate: u32) -> Result<(), &'static str> {
+        if mode != CanMode::SilentLoopback {
+            self.init_rm_portb();
+        }
 
         CAN1.ctlr().modify(|w| {
             w.set_sleep(false); // Wake up
@@ -191,15 +212,26 @@ impl Can {
             return Err("CAN peripheral did not enter initialization mode");
         }
 
-        // CAN baud rate is: CANbps=PCLK1/((TQBS1+TQBS2+3)*(PRESCALER+1))
-        CAN1.btimr().modify(|w| {
-            w.set_brp(CAN_PRESCALER - 1); // Set CAN1 time quantum length
-            w.set_ts1(CAN_TQBS1); // Set CAN1 time quantum in bit segment 1
-            w.set_ts2(CAN_TQBS2); // Set CAN1 time quantum in bit segment 2
-            w.set_sjw(CAN_SJW); // Set CAN1 resync jump width
-            w.set_lbkm(mode.regs().lbkm); // Set silent mode bit from mode
-            w.set_silm(mode.regs().silm); // Set loopback mode bit from mode
-        });
+        // CAN bit rate is: CANbps=PCLK1/((TQBS1+TQBS2+1)*(PRESCALER+1))
+        match util::calc_can_timings(hal::rcc::clocks().pclk1.0, bitrate) {
+            Some(bt) => {
+                let prescaler = u16::from(bt.prescaler) & 0x1FF;
+                let seg1 = u8::from(bt.seg1);
+                let seg2 = u8::from(bt.seg2) & 0x7F;
+                let sync_jump_width = u8::from(bt.sync_jump_width) & 0x7F;
+                CAN1.btimr().modify(|w| {
+                    w.set_brp(prescaler - 1); // Set CAN1 time quantum length
+                    w.set_ts1(seg1 - 1); // Set CAN1 time quantum in bit segment 1
+                    w.set_ts2(seg2 - 1); // Set CAN1 time quantum in bit segment 2
+                    w.set_sjw(sync_jump_width - 1); // Set CAN1 resync jump width
+                    w.set_lbkm(mode.regs().lbkm); // Set silent mode bit from mode
+                    w.set_silm(mode.regs().silm); // Set loopback mode bit from mode
+                });
+            }
+            None => return Err(
+                "Could not calculate CAN timing parameters for configured clock rate and bit rate",
+            ),
+        }
 
         CAN1.ctlr().modify(|w| w.set_inrq(false)); // Request exit init mode
 
