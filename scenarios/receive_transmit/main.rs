@@ -19,9 +19,9 @@ fn main() -> ! {
     hal::debug::SDIPrint::enable();
     let mut config = hal::Config::default();
     config.rcc = hal::rcc::Config::SYSCLK_FREQ_96MHZ_HSI;
-    hal::init(config);
+    let p = hal::init(config);
 
-    let can = Can::new(CanFifo::Fifo1);
+    let can = Can::new(p.CAN1, p.PB8, p.PB9, CanFifo::Fifo1);
 
     println!("Starting init CAN normal mode.");
 
