@@ -1,11 +1,13 @@
 #![no_std]
 #![no_main]
 
+mod registers;
+mod util;
+
 use ch32_hal as hal;
 use ch32_metapac as pac;
 use pac::AFIO;
-
-mod util;
+use registers::Registers;
 
 #[derive(PartialEq)]
 pub enum CanMode {
@@ -153,7 +155,6 @@ pub struct RxMessage {
     pub data: [u8; 8],
 }
 
-const CAN_INAK_TIMEOUT: u32 = 0xFFFF;
 const CAN_TX_TIMEOUT: u32 = 0xFFF;
 
 pub struct Can<'d, T: Instance> {
@@ -195,53 +196,17 @@ impl<'d, T: Instance> Can<'d, T> {
     ///
     /// Requires adding a filter before use. See the `add_filter` method.
     pub fn init_mode(&self, mode: CanMode, bitrate: u32) -> Result<(), &'static str> {
-        T::regs().ctlr().modify(|w| {
-            w.set_sleep(false); // Wake up
-            w.set_inrq(true); // Request enter init mode
-        });
-
-        let mut wait_ack: u32 = 0;
-        // Wait until CAN is in init mode
-        while !T::regs().statr().read().inak() && wait_ack < CAN_INAK_TIMEOUT {
-            wait_ack += 1;
-        }
-
-        if !T::regs().statr().read().inak() {
-            return Err("CAN peripheral did not enter initialization mode");
-        }
+        Registers(T::regs()).enter_init_mode();
 
         // CAN bit rate is: CANbps=PCLK1/((TQBS1+TQBS2+1)*(PRESCALER+1))
         match util::calc_can_timings(T::frequency().0, bitrate) {
-            Some(bt) => {
-                let prescaler = u16::from(bt.prescaler) & 0x1FF;
-                let seg1 = u8::from(bt.seg1);
-                let seg2 = u8::from(bt.seg2) & 0x7F;
-                let sync_jump_width = u8::from(bt.sync_jump_width) & 0x7F;
-                T::regs().btimr().modify(|w| {
-                    w.set_brp(prescaler - 1); // Set CAN clock prescaler
-                    w.set_ts1(seg1 - 1); // Set CAN time quantum in bit segment 1
-                    w.set_ts2(seg2 - 1); // Set CAN time quantum in bit segment 2
-                    w.set_sjw(sync_jump_width - 1); // Set CAN resync jump width
-                    w.set_lbkm(mode.regs().lbkm); // Set silent mode bit from mode
-                    w.set_silm(mode.regs().silm); // Set loopback mode bit from mode
-                });
-            }
+            Some(bt) => Registers(T::regs()).set_bit_timing_and_mode(bt, mode),
             None => return Err(
                 "Could not calculate CAN timing parameters for configured clock rate and bit rate",
             ),
         }
 
-        T::regs().ctlr().modify(|w| w.set_inrq(false)); // Request exit init mode
-
-        wait_ack = 0;
-        // Wait until CAN is no longer in init mode
-        while T::regs().statr().read().inak() && wait_ack < CAN_INAK_TIMEOUT {
-            wait_ack += 1;
-        }
-
-        if T::regs().statr().read().inak() {
-            return Err("CAN peripheral did not exit initialization mode");
-        }
+        Registers(T::regs()).leave_init_mode();
 
         Ok(())
     }
