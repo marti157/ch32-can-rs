@@ -127,6 +127,8 @@ pub enum TxStatus {
     TimeoutError,
     /// Message wasn't sent correctly due to arbitration
     ArbitrationError,
+    /// Message wasn't sent because all mailboxes were full
+    MailboxError,
     /// Message wasn't sent correctly due to error
     OtherError,
 }
@@ -287,9 +289,21 @@ impl<'d, T: Instance> Can<'d, T> {
         TxStatus::OtherError
     }
 
-    pub fn send_message_no_checks(&self, message: &[u8; 8], stid: u16) -> TxResult {
-        // TODO: determine mailbox num depending on emptiness
-        let mailbox_num: usize = 0;
+    pub fn send_message(&self, message: &[u8; 8], stid: u16) -> TxResult {
+        let mailbox_num;
+        let transmit_status = T::regs().tstatr().read();
+        if transmit_status.tme(0) {
+            mailbox_num = 0;
+        } else if transmit_status.tme(1) {
+            mailbox_num = 1;
+        } else if transmit_status.tme(2) {
+            mailbox_num = 2;
+        } else {
+            return TxResult {
+                status: TxStatus::MailboxError,
+                mailbox: u8::MAX,
+            };
+        }
 
         let tx_data_high: u32 = ((message[7] as u32) << 24)
             | ((message[6] as u32) << 16)
