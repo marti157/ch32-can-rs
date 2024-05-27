@@ -11,13 +11,13 @@ fn main() -> ! {
     hal::debug::SDIPrint::enable();
     let mut config = hal::Config::default();
     config.rcc = hal::rcc::Config::SYSCLK_FREQ_96MHZ_HSI;
-    hal::init(config);
+    let p = hal::init(config);
 
-    let can = Can::new(CanFifo::Fifo1);
+    let can = Can::new(p.CAN1, p.PB8, p.PB9, CanFifo::Fifo1);
 
     println!("Starting init CAN silent loopback mode.");
 
-    match can.init_mode(CanMode::SilentLoopback) {
+    match can.init_mode(CanMode::SilentLoopback, 500_000) {
         Ok(_) => println!("Initialized CAN in silent loopback mode."),
         Err(msg) => {
             println!("Error initializing CAN: {msg}");
