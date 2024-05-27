@@ -212,23 +212,7 @@ impl<'d, T: Instance> Can<'d, T> {
     }
 
     pub fn add_filter(&self, filter: CanFilter) {
-        T::regs().fctlr().modify(|w| w.set_finit(true)); // Enable filter init mode
-        T::regs().fwr().modify(|w| w.set_fact(filter.bank, true)); // Activate new filter in filter bank
-        T::regs().fscfgr().modify(|w| w.set_fsc(filter.bank, true)); // Set filter scale config to single 32-bit (16-bit not implemented)
-        T::regs()
-            .fr(filter.fr_id_value_reg())
-            .write_value(pac::can::regs::Fr(filter.id_value)); // Set filter's id value to match/mask
-        T::regs()
-            .fr(filter.fr_id_mask_reg())
-            .write_value(pac::can::regs::Fr(filter.id_mask)); // Set filter's id bits to mask
-        T::regs()
-            .fmcfgr()
-            .modify(|w| w.set_fbm(filter.bank, filter.mode.val_bool())); // Set new filter's operating mode
-        T::regs()
-            .fafifor()
-            .modify(|w| w.set_ffa(filter.bank, self.fifo.val_bool())); // Associate CAN's FIFO to new filter
-        T::regs().fwr().modify(|w| w.set_fact(filter.bank, true)); // Activate new filter
-        T::regs().fctlr().modify(|w| w.set_finit(false)); // Exit filter init mode
+        Registers(T::regs()).add_filter(filter, &self.fifo);
     }
 
     fn transmit_status_blocking(&self, mailbox_num: usize) -> TxStatus {

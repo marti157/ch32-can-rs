@@ -40,4 +40,24 @@ impl Registers {
             w.set_silm(mode.regs().silm); // Set loopback mode bit from mode
         });
     }
+
+    pub fn add_filter(&self, filter: crate::CanFilter, associate_fifo: &crate::CanFifo) {
+        self.0.fctlr().modify(|w| w.set_finit(true)); // Enable filter init mode
+        self.0.fwr().modify(|w| w.set_fact(filter.bank, true)); // Activate new filter in filter bank
+        self.0.fscfgr().modify(|w| w.set_fsc(filter.bank, true)); // Set filter scale config to single 32-bit (16-bit not implemented)
+        self.0
+            .fr(filter.fr_id_value_reg())
+            .write_value(crate::pac::can::regs::Fr(filter.id_value)); // Set filter's id value to match/mask
+        self.0
+            .fr(filter.fr_id_mask_reg())
+            .write_value(crate::pac::can::regs::Fr(filter.id_mask)); // Set filter's id bits to mask
+        self.0
+            .fmcfgr()
+            .modify(|w| w.set_fbm(filter.bank, filter.mode.val_bool())); // Set new filter's operating mode
+        self.0
+            .fafifor()
+            .modify(|w| w.set_ffa(filter.bank, associate_fifo.val_bool())); // Associate CAN's FIFO to new filter
+        self.0.fwr().modify(|w| w.set_fact(filter.bank, true)); // Activate new filter
+        self.0.fctlr().modify(|w| w.set_finit(false)); // Exit filter init mode
+    }
 }
