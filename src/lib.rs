@@ -194,21 +194,14 @@ impl<'d, T: Instance> Can<'d, T> {
 
     /// Initialize CAN peripheral in a certain mode and bitrate (in bps).
     ///
-    /// Requires adding a filter before use. See the `add_filter` method.
-    pub fn init_mode(&self, mode: CanMode, bitrate: u32) -> Result<(), &'static str> {
+    /// If you want to receive frames, you must add a filter before use. See [add_filter](Self::add_filter).
+    pub fn init_config(&self, mode: CanMode, bitrate: u32) {
         Registers(T::regs()).enter_init_mode();
 
-        // CAN bit rate is: CANbps=PCLK1/((TQBS1+TQBS2+1)*(PRESCALER+1))
-        match util::calc_can_timings(T::frequency().0, bitrate) {
-            Some(bt) => Registers(T::regs()).set_bit_timing_and_mode(bt, mode),
-            None => return Err(
-                "Could not calculate CAN timing parameters for configured clock rate and bit rate",
-            ),
-        }
+        let bit_timings = util::calc_can_timings(T::frequency().0, bitrate).unwrap();
+        Registers(T::regs()).set_bit_timing_and_mode(bit_timings, mode);
 
         Registers(T::regs()).leave_init_mode();
-
-        Ok(())
     }
 
     pub fn add_filter(&self, filter: CanFilter) {

@@ -25,14 +25,7 @@ fn main() -> ! {
 
     println!("Starting init CAN normal mode.");
 
-    match can.init_mode(CanMode::Normal, 500_000) {
-        Ok(_) => println!("Initialized CAN in normal mode."),
-        Err(msg) => {
-            println!("Error initializing CAN: {msg}");
-            panic!();
-        }
-    }
-
+    can.init_config(CanMode::Normal, 500_000);
     can.add_filter(Default::default());
 
     println!("Init CAN normal mode & adding filter OK.");
