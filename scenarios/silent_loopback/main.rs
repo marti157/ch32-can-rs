@@ -13,11 +13,16 @@ fn main() -> ! {
     config.rcc = hal::rcc::Config::SYSCLK_FREQ_96MHZ_HSI;
     let p = hal::init(config);
 
-    let can = Can::new(p.CAN1, p.PB8, p.PB9, CanFifo::Fifo1);
+    println!("Creating CAN in silent loopback mode.");
 
-    println!("Starting init CAN silent loopback mode.");
-
-    can.init_config(CanMode::SilentLoopback, 500_000);
+    let can = Can::new(
+        p.CAN1,
+        p.PB8,
+        p.PB9,
+        CanFifo::Fifo1,
+        CanMode::SilentLoopback,
+        500_000,
+    );
     can.add_filter(Default::default());
 
     println!("Init CAN silent loopback mode & adding filter OK.");

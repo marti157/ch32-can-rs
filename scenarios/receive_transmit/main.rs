@@ -21,11 +21,16 @@ fn main() -> ! {
     config.rcc = hal::rcc::Config::SYSCLK_FREQ_96MHZ_HSI;
     let p = hal::init(config);
 
-    let can = Can::new(p.CAN1, p.PB8, p.PB9, CanFifo::Fifo1);
+    println!("Creating CAN in normal mode.");
 
-    println!("Starting init CAN normal mode.");
-
-    can.init_config(CanMode::Normal, 500_000);
+    let can = Can::new(
+        p.CAN1,
+        p.PB8,
+        p.PB9,
+        CanFifo::Fifo1,
+        CanMode::Normal,
+        500_000,
+    );
     can.add_filter(Default::default());
 
     println!("Init CAN normal mode & adding filter OK.");

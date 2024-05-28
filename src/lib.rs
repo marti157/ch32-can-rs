@@ -171,6 +171,8 @@ impl<'d, T: Instance> Can<'d, T> {
         rx: impl hal::Peripheral<P = impl RxPin<T>> + 'd,
         tx: impl hal::Peripheral<P = impl TxPin<T>> + 'd,
         fifo: CanFifo,
+        mode: CanMode,
+        bitrate: u32,
     ) -> Self {
         hal::into_ref!(peri, rx, tx);
 
@@ -185,23 +187,17 @@ impl<'d, T: Instance> Can<'d, T> {
             pac::gpio::vals::Mode::OUTPUT_50MHZ,
             pac::gpio::vals::Cnf::PULL_IN__AF_PUSH_PULL_OUT,
         );
+        T::remap(0b10); // CAN_RX is mapped to PB8, and CAN_TX is mapped to PB9
 
-        // CAN_RX is mapped to PB8, and CAN_TX is mapped to PB9
-        T::remap(0b10);
+        Registers(T::regs()).enter_init_mode(); // CAN enter initialization mode
 
-        this
-    }
-
-    /// Initialize CAN peripheral in a certain mode and bitrate (in bps).
-    ///
-    /// If you want to receive frames, you must add a filter before use. See [add_filter](Self::add_filter).
-    pub fn init_config(&self, mode: CanMode, bitrate: u32) {
-        Registers(T::regs()).enter_init_mode();
-
+        // Configure bit timing parameters and CAN operating mode
         let bit_timings = util::calc_can_timings(T::frequency().0, bitrate).unwrap();
         Registers(T::regs()).set_bit_timing_and_mode(bit_timings, mode);
 
-        Registers(T::regs()).leave_init_mode();
+        Registers(T::regs()).leave_init_mode(); // Exit CAN initialization mode
+
+        this
     }
 
     pub fn add_filter(&self, filter: CanFilter) {
