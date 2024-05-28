@@ -155,8 +155,6 @@ pub struct RxMessage {
     pub data: [u8; 8],
 }
 
-const CAN_TX_TIMEOUT: u32 = 0xFFF;
-
 pub struct Can<'d, T: Instance> {
     _peri: hal::PeripheralRef<'d, T>,
     fifo: CanFifo,
@@ -204,29 +202,6 @@ impl<'d, T: Instance> Can<'d, T> {
         Registers(T::regs()).add_filter(filter, &self.fifo);
     }
 
-    fn transmit_status_blocking(&self, mailbox_num: usize) -> TxStatus {
-        let mut wait_status: u32 = 0;
-        while !T::regs().tstatr().read().txok(mailbox_num) && wait_status < CAN_TX_TIMEOUT {
-            wait_status += 1;
-        }
-        if wait_status == CAN_TX_TIMEOUT {
-            return TxStatus::TimeoutError;
-        }
-
-        let tx_result = T::regs().tstatr().read();
-        if tx_result.txok(mailbox_num) {
-            return TxStatus::Sent;
-        }
-        if tx_result.alst(mailbox_num) {
-            return TxStatus::ArbitrationError;
-        }
-        if tx_result.terr(mailbox_num) {
-            return TxStatus::OtherError;
-        }
-
-        TxStatus::OtherError
-    }
-
     pub fn send_message(&self, message: &[u8; 8], stid: u16) -> TxResult {
         let mailbox_num;
         let transmit_status = T::regs().tstatr().read();
@@ -252,23 +227,10 @@ impl<'d, T: Instance> Can<'d, T> {
             | ((message[1] as u32) << 8)
             | message[0] as u32;
 
-        T::regs().txmdtr(mailbox_num).modify(|w| w.set_dlc(8)); // Set message length in bytes
-        T::regs()
-            .txmdhr(mailbox_num)
-            .write_value(pac::can::regs::Txmdhr(tx_data_high));
-        T::regs()
-            .txmdlr(mailbox_num)
-            .write_value(pac::can::regs::Txmdlr(tx_data_low));
-        T::regs()
-            .txmir(mailbox_num)
-            .write_value(pac::can::regs::Txmir(0x0)); // Clear CAN1 TXMIR register
-        T::regs().txmir(mailbox_num).modify(|w| {
-            w.set_stid(stid); // Using CAN Standard ID for message
-            w.set_txrq(true); // Initiate mailbox transfer request
-        });
+        Registers(T::regs()).write_mailbox(mailbox_num, stid, tx_data_high, tx_data_low);
 
         TxResult {
-            status: self.transmit_status_blocking(mailbox_num),
+            status: Registers(T::regs()).transmit_status(mailbox_num),
             mailbox: mailbox_num as u8,
         }
     }

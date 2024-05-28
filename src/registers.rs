@@ -1,3 +1,5 @@
+const CAN_TX_TIMEOUT: u32 = 0xFFF;
+
 pub(crate) struct Registers(pub crate::pac::can::Can);
 
 impl Registers {
@@ -59,5 +61,51 @@ impl Registers {
             .modify(|w| w.set_ffa(filter.bank, associate_fifo.val_bool())); // Associate CAN's FIFO to new filter
         self.0.fwr().modify(|w| w.set_fact(filter.bank, true)); // Activate new filter
         self.0.fctlr().modify(|w| w.set_finit(false)); // Exit filter init mode
+    }
+
+    pub fn write_mailbox(
+        &self,
+        mailbox_num: usize,
+        stid: u16,
+        tx_data_high: u32,
+        tx_data_low: u32,
+    ) {
+        self.0.txmdtr(mailbox_num).modify(|w| w.set_dlc(8)); // Set message length in bytes
+        self.0
+            .txmdhr(mailbox_num)
+            .write_value(crate::pac::can::regs::Txmdhr(tx_data_high));
+        self.0
+            .txmdlr(mailbox_num)
+            .write_value(crate::pac::can::regs::Txmdlr(tx_data_low));
+        self.0
+            .txmir(mailbox_num)
+            .write_value(crate::pac::can::regs::Txmir(0x0)); // Clear CAN1 TXMIR register
+        self.0.txmir(mailbox_num).modify(|w| {
+            w.set_stid(stid); // Using CAN Standard ID for message
+            w.set_txrq(true); // Initiate mailbox transfer request
+        });
+    }
+
+    pub fn transmit_status(&self, mailbox_num: usize) -> crate::TxStatus {
+        let mut wait_status: u32 = 0;
+        while !self.0.tstatr().read().txok(mailbox_num) && wait_status < CAN_TX_TIMEOUT {
+            wait_status += 1;
+        }
+        if wait_status == CAN_TX_TIMEOUT {
+            return crate::TxStatus::TimeoutError;
+        }
+
+        let tx_result = self.0.tstatr().read();
+        if tx_result.txok(mailbox_num) {
+            return crate::TxStatus::Sent;
+        }
+        if tx_result.alst(mailbox_num) {
+            return crate::TxStatus::ArbitrationError;
+        }
+        if tx_result.terr(mailbox_num) {
+            return crate::TxStatus::OtherError;
+        }
+
+        crate::TxStatus::OtherError
     }
 }
