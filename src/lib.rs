@@ -190,7 +190,9 @@ impl<'d, T: Instance> Can<'d, T> {
         Registers(T::regs()).enter_init_mode(); // CAN enter initialization mode
 
         // Configure bit timing parameters and CAN operating mode
-        let bit_timings = util::calc_can_timings(T::frequency().0, bitrate).unwrap();
+        let bit_timings = util::calc_can_timings(T::frequency().0, bitrate).expect(
+            "Bit timing parameters weren't satisfied for CAN clock rate and desired bitrate.",
+        );
         Registers(T::regs()).set_bit_timing_and_mode(bit_timings, mode);
 
         Registers(T::regs()).leave_init_mode(); // Exit CAN initialization mode
