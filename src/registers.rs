@@ -63,6 +63,20 @@ impl Registers {
         self.0.fctlr().modify(|w| w.set_finit(false)); // Exit filter init mode
     }
 
+    pub fn find_free_mailbox(&self) -> Option<usize> {
+        let tstatr = self.0.tstatr().read();
+        if tstatr.tme(0) {
+            return Some(0);
+        }
+        if tstatr.tme(1) {
+            return Some(1);
+        }
+        if tstatr.tme(2) {
+            return Some(2);
+        }
+        return None;
+    }
+
     pub fn write_mailbox(
         &self,
         mailbox_num: usize,

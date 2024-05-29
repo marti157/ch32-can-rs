@@ -205,20 +205,15 @@ impl<'d, T: Instance> Can<'d, T> {
     }
 
     pub fn send_message(&self, message: &[u8; 8], stid: u16) -> TxResult {
-        let mailbox_num;
-        let transmit_status = T::regs().tstatr().read();
-        if transmit_status.tme(0) {
-            mailbox_num = 0;
-        } else if transmit_status.tme(1) {
-            mailbox_num = 1;
-        } else if transmit_status.tme(2) {
-            mailbox_num = 2;
-        } else {
-            return TxResult {
-                status: TxStatus::MailboxError,
-                mailbox: u8::MAX,
-            };
-        }
+        let mailbox_num = match Registers(T::regs()).find_free_mailbox() {
+            Some(n) => n,
+            None => {
+                return TxResult {
+                    status: TxStatus::MailboxError,
+                    mailbox: u8::MAX,
+                }
+            }
+        };
 
         let tx_data_high: u32 = ((message[7] as u32) << 24)
             | ((message[6] as u32) << 16)
