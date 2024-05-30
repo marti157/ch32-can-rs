@@ -1,8 +1,15 @@
 #![no_std]
 #![no_main]
 
+mod error;
+mod frame;
 mod registers;
 mod util;
+
+pub use embedded_can::StandardId;
+pub use error::CanError;
+pub use frame::CanFrame;
+pub use nb;
 
 use ch32_hal as hal;
 use ch32_metapac as pac;
@@ -204,66 +211,59 @@ impl<'d, T: Instance> Can<'d, T> {
         Registers(T::regs()).add_filter(filter, &self.fifo);
     }
 
-    pub fn send_message(&self, message: &[u8; 8], stid: u16) -> TxResult {
+    /// Puts a frame in the transmit buffer to be sent on the bus.
+    ///
+    /// If the transmit buffer is full, this function will try to replace a pending
+    /// lower priority frame and return the frame that was replaced.
+    /// Returns `Err(WouldBlock)` if the transmit buffer is full and no frame can be
+    /// replaced.
+    pub fn transmit(&self, frame: &CanFrame) -> nb::Result<Option<CanFrame>, CanError> {
         let mailbox_num = match Registers(T::regs()).find_free_mailbox() {
             Some(n) => n,
-            None => {
-                return TxResult {
-                    status: TxStatus::MailboxError,
-                    mailbox: u8::MAX,
-                }
-            }
+            None => return Err(nb::Error::WouldBlock),
         };
 
-        let tx_data_high: u32 = ((message[7] as u32) << 24)
-            | ((message[6] as u32) << 16)
-            | ((message[5] as u32) << 8)
-            | message[4] as u32;
-        let tx_data_low: u32 = ((message[3] as u32) << 24)
-            | ((message[2] as u32) << 16)
-            | ((message[1] as u32) << 8)
-            | message[0] as u32;
+        Registers(T::regs()).write_frame_mailbox(mailbox_num, frame);
 
-        Registers(T::regs()).write_mailbox(mailbox_num, stid, tx_data_high, tx_data_low);
-
-        TxResult {
-            status: Registers(T::regs()).transmit_status(mailbox_num),
-            mailbox: mailbox_num as u8,
-        }
+        // Success in readying packet for transmit. No packets can be replaced in the
+        // transmit buffer so return None in accordance with embedded-can.
+        Ok(None)
     }
 
-    pub fn receive_message(&self) -> Option<RxMessage> {
-        let num_pending_messages = T::regs().rfifo(self.fifo.val()).read().fmp();
-        if num_pending_messages == 0 {
-            return None;
+    /// Returns a received frame if available.
+    pub fn receive(&self) -> nb::Result<CanFrame, CanError> {
+        if !Registers(T::regs()).fifo_has_messages_pending(&self.fifo) {
+            return nb::Result::Err(nb::Error::WouldBlock);
         }
 
-        let rx_message_unordered: u64 = ((T::regs().rxmdhr(self.fifo.val()).read().0 as u64) << 32)
-            | T::regs().rxmdlr(self.fifo.val()).read().0 as u64;
+        let frame = Registers(T::regs()).read_frame_fifo(&self.fifo);
 
-        let mut message = RxMessage {
-            length: T::regs().rxmdtr(self.fifo.val()).read().dlc(),
-            filter: T::regs().rxmdtr(self.fifo.val()).read().fmi(),
-            id: T::regs().rxmir(self.fifo.val()).read().stid(),
-            data: [0; 8],
-        };
+        Ok(frame)
+    }
+}
 
-        // Split rx_message into bytes
-        message
-            .data
-            .iter_mut()
-            .take(message.length as usize)
-            .enumerate()
-            .for_each(|(i, byte)| {
-                *byte = ((rx_message_unordered >> (i * 8)) & 0xFF) as u8;
-            });
+/// These trait methods are only usable within the embedded_can context.
+/// Under normal use of the [Can] instance,
+impl<'d, T> embedded_can::nb::Can for Can<'d, T>
+where
+    T: Instance,
+{
+    type Frame = CanFrame;
+    type Error = CanError;
 
-        // Release FIFO
-        T::regs()
-            .rfifo(self.fifo.val())
-            .modify(|w| w.set_rfom(true));
+    /// Puts a frame in the transmit buffer to be sent on the bus.
+    ///
+    /// If the transmit buffer is full, this function will try to replace a pending
+    /// lower priority frame and return the frame that was replaced.
+    /// Returns `Err(WouldBlock)` if the transmit buffer is full and no frame can be
+    /// replaced.
+    fn transmit(&mut self, frame: &Self::Frame) -> nb::Result<Option<Self::Frame>, Self::Error> {
+        Can::transmit(self, frame)
+    }
 
-        Some(message)
+    /// Returns a received frame if available.
+    fn receive(&mut self) -> nb::Result<Self::Frame, Self::Error> {
+        Can::receive(self)
     }
 }
 

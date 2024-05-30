@@ -26,6 +26,8 @@ version = "0.1.0"
 dependencies = [
  "ch32-hal",
  "ch32-metapac",
+ "embedded-can",
+ "nb 1.1.0",
 ]
 
 [[package]]
@@ -134,6 +136,15 @@ name = "embassy-usb-driver"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fc247028eae04174b6635104a35b1ed336aabef4654f5e87a8f32327d231970"
+
+[[package]]
+name = "embedded-can"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9d2e857f87ac832df68fa498d18ddc679175cf3d2e4aa893988e5601baf9438"
+dependencies = [
+ "nb 1.1.0",
+]
 
 [[package]]
 name = "embedded-hal"

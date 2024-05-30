@@ -35,3 +35,5 @@ ch32-hal = { default-features = false, features = [
     "embassy",
 ], git = "https://github.com/ch32-rs/ch32-hal.git", rev = "f17d8bab1f0161eb200276b33bfc2c39e184ff19" }
 ch32-metapac = { git = "https://github.com/ch32-rs/ch32-metapac.git", tag = "ch32-data-3e5718747ccd2dc429be042f893ed90b581ce265" }
+embedded-can = "0.4.1"
+nb = "1.1.0"

@@ -77,13 +77,16 @@ impl Registers {
         return None;
     }
 
-    pub fn write_mailbox(
-        &self,
-        mailbox_num: usize,
-        stid: u16,
-        tx_data_high: u32,
-        tx_data_low: u32,
-    ) {
+    pub fn write_frame_mailbox(&self, mailbox_num: usize, frame: &crate::CanFrame) {
+        let tx_data_high: u32 = ((frame.data[7] as u32) << 24)
+            | ((frame.data[6] as u32) << 16)
+            | ((frame.data[5] as u32) << 8)
+            | frame.data[4] as u32;
+        let tx_data_low: u32 = ((frame.data[3] as u32) << 24)
+            | ((frame.data[2] as u32) << 16)
+            | ((frame.data[1] as u32) << 8)
+            | frame.data[0] as u32;
+
         self.0.txmdtr(mailbox_num).modify(|w| w.set_dlc(8)); // Set message length in bytes
         self.0
             .txmdhr(mailbox_num)
@@ -93,9 +96,12 @@ impl Registers {
             .write_value(crate::pac::can::regs::Txmdlr(tx_data_low));
         self.0
             .txmir(mailbox_num)
-            .write_value(crate::pac::can::regs::Txmir(0x0)); // Clear CAN1 TXMIR register
+            .write_value(crate::pac::can::regs::Txmir(0x0)); // Clear CAN TXMIR register
         self.0.txmir(mailbox_num).modify(|w| {
-            w.set_stid(stid); // Using CAN Standard ID for message
+            w.set_stid(match frame.id {
+                embedded_can::Id::Standard(id) => id.as_raw(),
+                embedded_can::Id::Extended(_) => unimplemented!(),
+            }); // Using CAN Standard ID for message
             w.set_txrq(true); // Initiate mailbox transfer request
         });
     }
@@ -121,5 +127,23 @@ impl Registers {
         }
 
         crate::TxStatus::OtherError
+    }
+
+    pub fn fifo_has_messages_pending(&self, fifo: &crate::CanFifo) -> bool {
+        self.0.rfifo(fifo.val()).read().fmp() != 0
+    }
+
+    pub fn read_frame_fifo(&self, fifo: &crate::CanFifo) -> crate::frame::CanFrame {
+        let dlc = self.0.rxmdtr(fifo.val()).read().dlc() as usize;
+        let raw_id = self.0.rxmir(fifo.val()).read().stid();
+
+        let id = embedded_can::StandardId::new(raw_id).unwrap();
+
+        let frame_data_unordered: u64 = ((self.0.rxmdhr(fifo.val()).read().0 as u64) << 32)
+            | self.0.rxmdlr(fifo.val()).read().0 as u64;
+
+        let frame = crate::frame::CanFrame::new_from_data_registers(id, frame_data_unordered, dlc);
+
+        frame
     }
 }
