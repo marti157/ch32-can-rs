@@ -13,12 +13,12 @@ pub use nb;
 
 use ch32_hal as hal;
 use ch32_metapac as pac;
-use pac::AFIO;
 use registers::Registers;
 
 pub struct Can<'d, T: Instance> {
     _peri: hal::PeripheralRef<'d, T>,
     fifo: CanFifo,
+    last_mailbox_used: usize,
 }
 
 impl<'d, T: Instance> Can<'d, T> {
@@ -35,7 +35,11 @@ impl<'d, T: Instance> Can<'d, T> {
     ) -> Self {
         hal::into_ref!(peri, rx, tx);
 
-        let this = Self { _peri: peri, fifo };
+        let this = Self {
+            _peri: peri,
+            fifo,
+            last_mailbox_used: usize::MAX,
+        };
         T::enable_and_reset(); // Enable CAN peripheral
 
         rx.set_mode_cnf(
@@ -82,6 +86,15 @@ impl<'d, T: Instance> Can<'d, T> {
         // Success in readying packet for transmit. No packets can be replaced in the
         // transmit buffer so return None in accordance with embedded-can.
         Ok(None)
+    }
+
+    /// Retrieves status of the last frame transmission
+    pub fn transmit_status(&self) -> TxStatus {
+        if self.last_mailbox_used > 2 {
+            return TxStatus::OtherError;
+        }
+
+        Registers(T::regs()).transmit_status(self.last_mailbox_used)
     }
 
     /// Returns a received frame if available.
@@ -136,7 +149,7 @@ impl SealedInstance for hal::peripherals::CAN1 {
         pac::CAN1
     }
     fn remap(rm: u8) {
-        AFIO.pcfr1().modify(|w| w.set_can1_rm(rm));
+        pac::AFIO.pcfr1().modify(|w| w.set_can1_rm(rm));
     }
 }
 impl Instance for hal::peripherals::CAN1 {}
