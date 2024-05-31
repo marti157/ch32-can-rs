@@ -1,13 +1,13 @@
 #![no_std]
 #![no_main]
 
-mod error;
+mod enums;
 mod frame;
 mod registers;
 mod util;
 
 pub use embedded_can::StandardId;
-pub use error::CanError;
+pub use enums::{CanError, CanFifo, CanFilter, CanFilterMode, CanMode, TxStatus};
 pub use frame::CanFrame;
 pub use nb;
 
@@ -15,152 +15,6 @@ use ch32_hal as hal;
 use ch32_metapac as pac;
 use pac::AFIO;
 use registers::Registers;
-
-#[derive(PartialEq)]
-pub enum CanMode {
-    Normal,
-    Silent,
-    Loopback,
-    SilentLoopback,
-}
-
-struct CanModeRegs {
-    /// Loopback mode setting
-    lbkm: bool,
-    /// Silent mode setting
-    silm: bool,
-}
-
-impl CanMode {
-    fn regs(&self) -> CanModeRegs {
-        match self {
-            CanMode::Normal => CanModeRegs {
-                lbkm: false,
-                silm: false,
-            },
-            CanMode::Silent => CanModeRegs {
-                lbkm: false,
-                silm: true,
-            },
-            CanMode::Loopback => CanModeRegs {
-                lbkm: true,
-                silm: false,
-            },
-            CanMode::SilentLoopback => CanModeRegs {
-                lbkm: true,
-                silm: true,
-            },
-        }
-    }
-}
-
-pub enum CanFifo {
-    Fifo0,
-    Fifo1,
-}
-
-impl CanFifo {
-    fn val(&self) -> usize {
-        match self {
-            CanFifo::Fifo0 => 0,
-            CanFifo::Fifo1 => 1,
-        }
-    }
-
-    fn val_bool(&self) -> bool {
-        match self {
-            CanFifo::Fifo0 => false,
-            CanFifo::Fifo1 => true,
-        }
-    }
-}
-
-pub enum CanFilterMode {
-    /// Matches the incoming ID to a predefined value after applying a predefined bit mask.
-    IdMask,
-    /// Matches the incoming ID to a predefined set of values.
-    IdList,
-}
-
-impl CanFilterMode {
-    fn val_bool(&self) -> bool {
-        match self {
-            CanFilterMode::IdMask => false,
-            CanFilterMode::IdList => true,
-        }
-    }
-}
-
-/// See table 24-1 of the reference manual for more details on filtering and modes.
-pub struct CanFilter {
-    /// Filter bank number, 0-27
-    bank: usize,
-    /// Filter mode, either identifier mask or identifier list
-    mode: CanFilterMode,
-    /// Values for `STID:EXID:IDE:RTR:0` from msb to lsb to be matched with an incoming message's values.
-    /// In IdList mode, value should be a 32-bit id or two 16-bit ids.
-    id_value: u32,
-    /// Bit mask to be applied to incoming message before comparing it to a predefined value.
-    /// In IdList mode, this is used in the same way as `id_value` is.
-    id_mask: u32,
-}
-
-impl CanFilter {
-    /// Offset in `usize` for bank `n` filter register 1
-    fn fr_id_value_reg(&self) -> usize {
-        self.bank * 2 + 0
-    }
-
-    /// Offset in `usize` for bank `n` filter register 2
-    fn fr_id_mask_reg(&self) -> usize {
-        self.bank * 2 + 1
-    }
-}
-
-impl Default for CanFilter {
-    fn default() -> Self {
-        Self {
-            bank: 0,
-            mode: CanFilterMode::IdMask,
-            id_value: 0,
-            id_mask: 0,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum TxStatus {
-    /// Message was sent correctly
-    Sent,
-    /// Message wasn't sent correctly due to send timeout
-    TimeoutError,
-    /// Message wasn't sent correctly due to arbitration
-    ArbitrationError,
-    /// Message wasn't sent because all mailboxes were full
-    MailboxError,
-    /// Message wasn't sent correctly due to error
-    OtherError,
-}
-
-#[derive(Debug)]
-pub struct TxResult {
-    /// Resulting status of message transmission
-    pub status: TxStatus,
-    /// Which mailbox was used to send the message, 0-3
-    pub mailbox: u8,
-}
-
-#[derive(Debug)]
-pub struct RxMessage {
-    /// Message length in bytes, 1-8
-    pub length: u8,
-    /// Filter bank that matched the message, 0-27
-    pub filter: u8,
-    /// Identifier used in message
-    pub id: u16,
-    /// Message data up to `length` bytes, 0 after that
-    pub data: [u8; 8],
-}
 
 pub struct Can<'d, T: Instance> {
     _peri: hal::PeripheralRef<'d, T>,
