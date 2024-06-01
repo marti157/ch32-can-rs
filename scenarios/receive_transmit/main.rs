@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use ch32_can_rs::{nb, Can, CanFifo, CanFrame, CanMode, StandardId};
+use ch32_can_rs::{nb, Can, CanFifo, CanFilter, CanFrame, CanMode, StandardId};
 use hal::println;
 use qingke::riscv;
 use {ch32_hal as hal, panic_halt as _};
@@ -31,7 +31,7 @@ fn main() -> ! {
         CanMode::Normal,
         500_000,
     );
-    can.add_filter(Default::default());
+    can.add_filter(CanFilter::accept_all());
 
     println!("Init CAN normal mode & adding filter OK.");
 

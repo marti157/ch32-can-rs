@@ -30,7 +30,10 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 name = "ch32-can-rs"
 version = "0.1.0"
 dependencies = [
- "ch32-metapac 0.1.0 (git+https://github.com/ch32-rs/ch32-metapac.git?tag=ch32-data-038b858b45b9b92f4758318f1d746b82427897e9)",
+ "ch32-hal",
+ "ch32-metapac",
+ "embedded-can",
+ "nb 1.1.0",
 ]
 
 [[package]]
@@ -47,15 +50,16 @@ dependencies = [
 [[package]]
 name = "ch32-hal"
 version = "0.1.0"
-source = "git+https://github.com/ch32-rs/ch32-hal.git?rev=01d6564b0bf0cf05ecc8baabea4b245c0089dd5a#01d6564b0bf0cf05ecc8baabea4b245c0089dd5a"
+source = "git+https://github.com/ch32-rs/ch32-hal.git?rev=f17d8bab1f0161eb200276b33bfc2c39e184ff19#f17d8bab1f0161eb200276b33bfc2c39e184ff19"
 dependencies = [
- "ch32-metapac 0.1.0 (git+https://github.com/ch32-rs/ch32-metapac.git?tag=ch32-data-b6fa48d43f467e8e87ea826c2979ada86e0e6f02)",
+ "ch32-metapac",
  "critical-section",
  "defmt",
  "embassy-futures",
  "embassy-sync",
  "embassy-time",
  "embassy-time-driver",
+ "embassy-usb-driver",
  "embedded-hal 0.2.7",
  "embedded-hal 1.0.0",
  "embedded-hal-nb",
@@ -72,16 +76,7 @@ dependencies = [
 [[package]]
 name = "ch32-metapac"
 version = "0.1.0"
-source = "git+https://github.com/ch32-rs/ch32-metapac.git?tag=ch32-data-038b858b45b9b92f4758318f1d746b82427897e9#5c4b205adff3eb934b4505410b53c082df6e07c8"
-dependencies = [
- "riscv",
- "vcell",
-]
-
-[[package]]
-name = "ch32-metapac"
-version = "0.1.0"
-source = "git+https://github.com/ch32-rs/ch32-metapac.git?tag=ch32-data-b6fa48d43f467e8e87ea826c2979ada86e0e6f02#716ddc7415c7cdb429b95376ce1738ed95162f2b"
+source = "git+https://github.com/ch32-rs/ch32-metapac.git?tag=ch32-data-3e5718747ccd2dc429be042f893ed90b581ce265#f7f6af2adb13b0f4eb8d714d70126140c2283210"
 dependencies = [
  "riscv",
  "vcell",
@@ -185,6 +180,21 @@ name = "embassy-time-queue-driver"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1177859559ebf42cd24ae7ba8fe6ee707489b01d0bf471f8827b7b12dcb0bc0"
+
+[[package]]
+name = "embassy-usb-driver"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4fc247028eae04174b6635104a35b1ed336aabef4654f5e87a8f32327d231970"
+
+[[package]]
+name = "embedded-can"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9d2e857f87ac832df68fa498d18ddc679175cf3d2e4aa893988e5601baf9438"
+dependencies = [
+ "nb 1.1.0",
+]
 
 [[package]]
 name = "embedded-hal"
@@ -413,9 +423,9 @@ dependencies = [
 
 [[package]]
 name = "qingke-rt"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a81bc137319a922b2a97f9e04ae0c00709f69588f7e29d425f9f88f7b9a42f79"
+checksum = "b175d27f60c4bc2d779158c2bf0746b4b2f4597732083befbd64b0cc7ab7b608"
 dependencies = [
  "qingke",
  "qingke-rt-macros",
@@ -423,9 +433,9 @@ dependencies = [
 
 [[package]]
 name = "qingke-rt-macros"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3270f6d3f814bc602390f99b24d22e18f416fbcd20d05968a1ccb080a62f2b4f"
+checksum = "c54802ab7754743f6948ccb40547ae0fad2243ff5095b2851c59c4f6bdf65d7b"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",

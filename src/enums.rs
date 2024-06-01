@@ -160,6 +160,16 @@ pub struct CanFilter {
 }
 
 impl CanFilter {
+    /// Creates a filter that accepts all frames
+    pub fn accept_all() -> Self {
+        Self {
+            bank: 0,
+            mode: CanFilterMode::IdMask,
+            id_value: 0,
+            id_mask: 0,
+        }
+    }
+
     /// Offset in `usize` for bank `n` filter register 1
     pub(crate) fn fr_id_value_reg(&self) -> usize {
         self.bank * 2 + 0
@@ -168,17 +178,6 @@ impl CanFilter {
     /// Offset in `usize` for bank `n` filter register 2
     pub(crate) fn fr_id_mask_reg(&self) -> usize {
         self.bank * 2 + 1
-    }
-}
-
-impl Default for CanFilter {
-    fn default() -> Self {
-        Self {
-            bank: 0,
-            mode: CanFilterMode::IdMask,
-            id_value: 0,
-            id_mask: 0,
-        }
     }
 }
 
