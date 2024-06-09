@@ -1,10 +1,10 @@
 #![no_std]
 #![no_main]
 
-use ch32_can_rs::{nb, Can, CanFifo, CanFilter, CanFrame, CanMode, StandardId};
+use ch32_can_rs::{hal, nb, Can, CanFifo, CanFilter, CanFrame, CanMode, StandardId};
 use hal::println;
+use panic_halt as _;
 use qingke::riscv;
-use {ch32_hal as hal, panic_halt as _};
 
 #[derive(PartialEq)]
 enum ScenarioMode {

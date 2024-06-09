@@ -25,7 +25,6 @@ name = "ch32-can-rs"
 version = "0.1.0"
 dependencies = [
  "ch32-hal",
- "ch32-metapac",
  "embedded-can",
  "nb 1.1.0",
 ]

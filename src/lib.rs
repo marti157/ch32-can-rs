@@ -13,5 +13,5 @@ pub use enums::{CanError, CanFifo, CanFilter, CanFilterMode, CanMode, TxStatus};
 pub use frame::CanFrame;
 pub use nb;
 
-use ch32_hal as hal;
-use ch32_metapac as pac;
+pub use ch32_hal as hal;
+use hal::pac;
