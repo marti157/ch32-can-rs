@@ -1,54 +1,20 @@
-Serial on the CH32V20X line using the [ch32v2 PAC](https://crates.io/crates/ch32v2).
+# CAN HAL for ch32
 
-Sample from the [ch32-rs](https://github.com/ch32-rs) team. Tested using Rust `1.76.0`.
+![Build](https://github.com/marti157/ch32-can-rs/actions/workflows/rust.yml/badge.svg)
 
-## Wiring
+Rust HAL (Hardware Abstraction Layer) crate for WCH's 32-bit RISC-V microcontrollers's CAN peripheral. Contains abstractions to use the CAN bus.
 
-`PA0` needs to be wired to any of the `LED` pins.
+Implements [embedded-can](https://docs.rs/embedded-can/latest/embedded_can).
 
-## Requirements
+Depends on the [ch32-hal](https://github.com/ch32-rs/ch32-hal) and [PAC](https://github.com/ch32-rs/ch32-data) (Peripheral Access Crate).
 
-You must have an OpenOCD binary patched to support Wlink. WCH has published the source to their version of [OpenOCD](https://github.com/openwch/openocd_wch), which can be built.
+## Examples
 
-Make sure to update the environment variables to reflect your binary.
+The `scenarios/` directory includes basic use of the HAL.
 
-## Notes
+## Contributing
 
-When running a debug build, the clock speed is around 8x slower.
-
-## Setup
-
-`$ rustup target add riscv32imac-unknown-none-elf`
-
-## Building
-
-`$ make`
-
-For a debug build:
-
-`$ make DEBUG=1`
-
-## Flasing
-
-Connect the board through the LinkE adapter
-
-`$ make flash`
-
-To flash a debug build:
-
-`$ make flash DEBUG=1`
-
-## Debugging
-
-Debugging not only requires OpenOCD, but a RISC-V GNU Toolchain (for GDB). You can build one from riscv-collab, or get a pre-built one by xPack or others.
-
-Start the GDB server in one session:
-
-`$ make debug`
-
-And connect to it through another:
-
-`$ make connect`
+Contributions are welcome.
 
 ## LICENSE
 
